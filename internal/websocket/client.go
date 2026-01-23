@@ -10,13 +10,14 @@ import (
 type Client struct {
 	conn      *websocket.Conn
 	broadcast chan *model.Message
-	hub       Hub
+	hub       *Hub
 }
 
-func NewClient(conn *websocket.Conn) *Client {
+func NewClient(conn *websocket.Conn, hub *Hub) *Client {
 	return &Client{
 		conn:      conn,
 		broadcast: make(chan *model.Message),
+		hub:       hub,
 	}
 }
 
