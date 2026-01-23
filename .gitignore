@@ -3,3 +3,4 @@
 /internal/db/migrations
 *.xml
 *.iml
+/internal/user/repository
