@@ -3,16 +3,16 @@ package routes
 import (
 	"github.com/QuUteO/video-communication/internal/static"
 	"github.com/QuUteO/video-communication/internal/user/handler"
-	"github.com/QuUteO/video-communication/internal/websocket/handler"
+	"github.com/QuUteO/video-communication/internal/websocket"
 	"github.com/go-chi/chi/v5"
 )
 
 type Route struct {
 	UserHandler      *handler.UserHandler
-	WebSocketHandler *ws.WebSocketHandler
+	WebSocketHandler *websocket.WebSocket
 }
 
-func NewRoute(userHandler *handler.UserHandler, WebSocketHandler *ws.WebSocketHandler) *Route {
+func NewRoute(userHandler *handler.UserHandler, WebSocketHandler *websocket.WebSocket) *Route {
 	return &Route{
 		UserHandler:      userHandler,
 		WebSocketHandler: WebSocketHandler,
@@ -23,7 +23,7 @@ func (h *Route) RegisterRoutes(router chi.Router) {
 	router.Get("/", static.ServeHtml("index.html"))
 
 	router.Route("/ws", func(r chi.Router) {
-		r.Get("/", h.WebSocketHandler.WsHandler)
+		r.Get("/", h.WebSocketHandler.WebSocketHTTP)
 	})
 
 	router.Route("/users", func(r chi.Router) {

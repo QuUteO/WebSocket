@@ -1,42 +1,558 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <title>WebSocket Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Communication Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .status.connected {
+            background: #4CAF50;
+        }
+
+        .status.disconnected {
+            background: #f44336;
+        }
+
+        .main-content {
+            display: flex;
+            min-height: 600px;
+        }
+
+        .video-section {
+            flex: 2;
+            padding: 20px;
+            background: #f5f5f5;
+            border-right: 1px solid #ddd;
+        }
+
+        .chat-section {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .video-container {
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 400px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #764ba2;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #startVideo {
+            background: #4CAF50;
+        }
+
+        #stopVideo {
+            background: #f44336;
+        }
+
+        #startAudio {
+            background: #2196F3;
+        }
+
+        #stopAudio {
+            background: #ff9800;
+        }
+
+        .chat-container {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .message.system {
+            background: #e3f2fd;
+            margin: 0 auto;
+            text-align: center;
+            font-style: italic;
+            color: #666;
+        }
+
+        .message.remote {
+            background: #e8f5e9;
+            align-self: flex-start;
+        }
+
+        .message.local {
+            background: #bbdefb;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .message-content {
+            font-size: 0.95rem;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #ddd;
+        }
+
+        #chatInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            margin-right: 10px;
+        }
+
+        #sendButton {
+            padding: 10px 20px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        #username {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            flex: 1;
+        }
+
+        .connection-info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+    </style>
 </head>
 <body>
-<h1>WebSocket Test</h1>
-<input type="text" id="message" placeholder="Enter message">
-<button onclick="sendMessage()">Send</button>
-<div id="messages"></div>
+<div class="container">
+    <header>
+        <h1>🎥 Video Communication Test</h1>
+        <div id="connectionStatus" class="status disconnected">Disconnected</div>
+    </header>
+
+    <div class="main-content">
+        <section class="video-section">
+            <h2>📹 Video Stream</h2>
+            <div class="video-container">
+                <video id="localVideo" autoplay muted playsinline></video>
+            </div>
+
+            <div class="video-controls">
+                <button id="startVideo">📹 Start Video</button>
+                <button id="stopVideo" disabled>⏹️ Stop Video</button>
+                <button id="startAudio">🎤 Start Audio</button>
+                <button id="stopAudio" disabled>🔇 Stop Audio</button>
+            </div>
+
+            <div class="connection-info">
+                <p>WebSocket URL: <span id="wsUrl">ws://localhost:8080/ws/</span></p>
+                <p>Connection: <span id="connectionState">Not connected</span></p>
+                <p>Clients connected: <span id="clientCount">0</span></p>
+            </div>
+        </section>
+
+        <section class="chat-section">
+            <h2>💬 Chat</h2>
+
+            <div class="user-info">
+                <input type="text" id="username" placeholder="Enter your name" value="Guest">
+                <button id="updateUsername">Update</button>
+            </div>
+
+            <div class="chat-container">
+                <div id="messages">
+                    <div class="message system">
+                        Welcome to Video Communication Test! Connect to start chatting.
+                    </div>
+                </div>
+
+                <div class="chat-input">
+                    <input type="text" id="chatInput" placeholder="Type your message..." disabled>
+                    <button id="sendButton" disabled>Send</button>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
 
 <script>
-    const ws = new WebSocket('ws://' + window.location.host + '/ws/');
+    // Элементы DOM
+    const localVideo = document.getElementById('localVideo');
+    const messagesDiv = document.getElementById('messages');
+    const chatInput = document.getElementById('chatInput');
+    const sendButton = document.getElementById('sendButton');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const connectionState = document.getElementById('connectionState');
+    const clientCount = document.getElementById('clientCount');
+    const usernameInput = document.getElementById('username');
+    const updateUsernameButton = document.getElementById('updateUsername');
 
-    ws.onopen = function () {
-        console.log('Connected to WebSocket');
-    };
+    // Видео элементы управления
+    const startVideoButton = document.getElementById('startVideo');
+    const stopVideoButton = document.getElementById('stopVideo');
+    const startAudioButton = document.getElementById('startAudio');
+    const stopAudioButton = document.getElementById('stopAudio');
 
-    ws.onmessage = function (event) {
-        const msg = JSON.parse(event.data);
-        const div = document.createElement('div');
-        div.textContent = `[${msg.time}] ${msg.sender}: ${msg.content}`;
-        document.getElementById('messages').appendChild(div);
-    };
+    // Переменные
+    let ws;
+    let localStream;
+    let username = usernameInput.value;
+    let connectedClients = 0;
 
-    ws.onclose = function () {
-        console.log('Disconnected from WebSocket');
-    };
+    // Инициализация WebSocket
+    function initWebSocket() {
+        const wsUrl = `ws://${window.location.host}/ws/`;
+        document.getElementById('wsUrl').textContent = wsUrl;
 
-    function sendMessage() {
-        const input = document.getElementById('message');
-        const message = {
-            type: 'message',
-            sender: 'user',
-            content: input.value
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = function() {
+            console.log('✅ WebSocket connected');
+            updateConnectionStatus(true);
+            addSystemMessage('Connected to server');
+
+            // Активируем элементы управления
+            chatInput.disabled = false;
+            sendButton.disabled = false;
+            startVideoButton.disabled = false;
+            startAudioButton.disabled = false;
+
+            // Отправляем информацию о подключении
+            sendMessage('system', `${username} joined the chat`);
         };
-        ws.send(JSON.stringify(message));
-        input.value = '';
+
+        ws.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('📨 Received:', data);
+
+                // Обрабатываем сообщение
+                if (data.type === 'chat') {
+                    const isLocal = data.sender === username;
+                    addChatMessage(data.sender, data.content, data.time, isLocal);
+                } else if (data.type === 'system') {
+                    addSystemMessage(data.content);
+                } else if (data.type === 'client_count') {
+                    updateClientCount(data.count);
+                }
+            } catch (e) {
+                console.error('❌ Failed to parse message:', e);
+            }
+        };
+
+        ws.onclose = function() {
+            console.log('🔌 WebSocket disconnected');
+            updateConnectionStatus(false);
+            addSystemMessage('Disconnected from server');
+
+            // Деактивируем элементы управления
+            chatInput.disabled = true;
+            sendButton.disabled = true;
+            stopAllMedia();
+        };
+
+        ws.onerror = function(error) {
+            console.error('❌ WebSocket error:', error);
+            addSystemMessage('Connection error occurred');
+        };
     }
+
+    // Обновление статуса подключения
+    function updateConnectionStatus(isConnected) {
+        if (isConnected) {
+            connectionStatus.textContent = 'Connected';
+            connectionStatus.className = 'status connected';
+            connectionState.textContent = 'Connected';
+        } else {
+            connectionStatus.textContent = 'Disconnected';
+            connectionStatus.className = 'status disconnected';
+            connectionState.textContent = 'Disconnected';
+            clientCount.textContent = '0';
+        }
+    }
+
+    // Отправка сообщения
+    function sendMessage(type, content, sender = username) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            const message = {
+                type: type || 'chat',
+                sender: sender,
+                content: content,
+                timestamp: new Date().toISOString()
+            };
+            ws.send(JSON.stringify(message));
+            console.log('📤 Sent:', message);
+        }
+    }
+
+    // Добавление сообщения в чат
+    function addChatMessage(sender, content, time, isLocal = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isLocal ? 'local' : 'remote'}`;
+
+        const timeStr = time || new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+        messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-sender">${sender}</span>
+                    <span class="message-time">${timeStr}</span>
+                </div>
+                <div class="message-content">${content}</div>
+            `;
+
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Добавление системного сообщения
+    function addSystemMessage(content) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message system';
+        messageDiv.textContent = content;
+
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Обновление количества клиентов
+    function updateClientCount(count) {
+        connectedClients = count;
+        clientCount.textContent = count;
+    }
+
+    // Управление видеопотоком
+    async function startVideo() {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: false
+            });
+            localVideo.srcObject = localStream;
+
+            startVideoButton.disabled = true;
+            stopVideoButton.disabled = false;
+
+            addSystemMessage('Video started');
+            sendMessage('system', `${username} started video`);
+        } catch (error) {
+            console.error('❌ Error accessing camera:', error);
+            addSystemMessage('Failed to access camera');
+        }
+    }
+
+    function stopVideo() {
+        if (localStream) {
+            localStream.getVideoTracks().forEach(track => track.stop());
+            localVideo.srcObject = null;
+
+            startVideoButton.disabled = false;
+            stopVideoButton.disabled = true;
+
+            addSystemMessage('Video stopped');
+            sendMessage('system', `${username} stopped video`);
+        }
+    }
+
+    async function startAudio() {
+        try {
+            if (!localStream) {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: false,
+                    audio: true
+                });
+            } else {
+                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioStream.getAudioTracks().forEach(track => {
+                    localStream.addTrack(track);
+                });
+            }
+
+            localVideo.srcObject = localStream;
+
+            startAudioButton.disabled = true;
+            stopAudioButton.disabled = false;
+
+            addSystemMessage('Audio started');
+            sendMessage('system', `${username} started audio`);
+        } catch (error) {
+            console.error('❌ Error accessing microphone:', error);
+            addSystemMessage('Failed to access microphone');
+        }
+    }
+
+    function stopAudio() {
+        if (localStream) {
+            localStream.getAudioTracks().forEach(track => track.stop());
+
+            startAudioButton.disabled = false;
+            stopAudioButton.disabled = true;
+
+            addSystemMessage('Audio stopped');
+            sendMessage('system', `${username} stopped audio`);
+        }
+    }
+
+    function stopAllMedia() {
+        stopVideo();
+        stopAudio();
+    }
+
+    // Обработчики событий
+    startVideoButton.addEventListener('click', startVideo);
+    stopVideoButton.addEventListener('click', stopVideo);
+    startAudioButton.addEventListener('click', startAudio);
+    stopAudioButton.addEventListener('click', stopAudio);
+
+    sendButton.addEventListener('click', function() {
+        const message = chatInput.value.trim();
+        if (message) {
+            sendMessage('chat', message);
+            addChatMessage(username, message, new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), true);
+            chatInput.value = '';
+        }
+    });
+
+    chatInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendButton.click();
+        }
+    });
+
+    updateUsernameButton.addEventListener('click', function() {
+        const newUsername = usernameInput.value.trim();
+        if (newUsername && newUsername !== username) {
+            const oldUsername = username;
+            username = newUsername;
+            addSystemMessage(`Username changed from ${oldUsername} to ${username}`);
+            sendMessage('system', `${oldUsername} changed name to ${username}`);
+        }
+    });
+
+    // Периодическая проверка подключения
+    setInterval(function() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            // Можно отправлять ping сообщение
+            // ws.send(JSON.stringify({ type: 'ping' }));
+        }
+    }, 30000);
+
+    // Инициализация при загрузке страницы
+    window.addEventListener('load', function() {
+        initWebSocket();
+        addSystemMessage('Page loaded. Click "Connect" to start.');
+    });
+
+    // Автоматическое подключение при загрузке
+    initWebSocket();
 </script>
 </body>
 </html>

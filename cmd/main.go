@@ -11,7 +11,7 @@ import (
 	"github.com/QuUteO/video-communication/internal/user/handler"
 	"github.com/QuUteO/video-communication/internal/user/repository"
 	"github.com/QuUteO/video-communication/internal/user/service"
-	"github.com/QuUteO/video-communication/internal/websocket/handler"
+	"github.com/QuUteO/video-communication/internal/websocket"
 	"github.com/QuUteO/video-communication/pkg/db"
 	"github.com/go-chi/chi/v5"
 )
@@ -43,12 +43,13 @@ func main() {
 	repo := repository.NewRepository(client, log)
 	srv := service.NewService(repo, log)
 	handle := handler.NewUserHandler(srv, log)
-	wsHandler := ws.NewWsSocket(log)
 
-	go wsHandler.WriteToClientsBroadcast()
+	// websocket
+	hub := websocket.NewHub()
+	wsHandle := websocket.NewWebSocket(hub)
 
 	// routes
-	route := routes.NewRoute(handle, wsHandler)
+	route := routes.NewRoute(handle, wsHandle)
 	route.RegisterRoutes(r)
 
 	log.Info("Starting server")
