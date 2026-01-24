@@ -27,13 +27,11 @@ func (ws *WebSocket) WebSocketHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error upgrading websocket connection: %v \n", err.Error())
 	}
-
 	ws.logger.Info("WebSocket connection: %s", conn.RemoteAddr().String())
 
 	client := NewClient(conn, ws.hub)
-
 	client.hub.register <- client
 
 	go client.WritePump()
-	client.ReadPump()
+	go client.ReadPump()
 }

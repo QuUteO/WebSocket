@@ -556,3 +556,30 @@
 </script>
 </body>
 </html>
+
+<!--<input id="user" placeholder="Username">
+<input id="text" placeholder="Message">
+<button onclick="send()">Send</button>
+
+<pre id="chat"></pre>
+
+<script>
+    const ws = new WebSocket("ws://localhost:8080/ws");
+
+    ws.onmessage = e => {
+        const msg = JSON.parse(e.data);
+        document.getElementById("chat").textContent += msg.user + ": " + msg.text + "\n";
+    };
+
+    function send() {
+        const username = document.getElementById("user").value || "Anonymous";
+        const text = document.getElementById("text").value;
+
+        ws.send(JSON.stringify({
+            user: username,
+            text: text
+        }));
+
+        document.getElementById("text").value = "";
+    }
+</script>-->
