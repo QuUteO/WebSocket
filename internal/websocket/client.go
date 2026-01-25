@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/QuUteO/video-communication/internal/model"
+	"github.com/QuUteO/video-communication/internal/user/service"
 	"github.com/gorilla/websocket"
 )
 
@@ -11,13 +12,15 @@ type Client struct {
 	conn *websocket.Conn
 	send chan model.Message
 	hub  *Hub
+	srv  *service.Service
 }
 
-func NewClient(conn *websocket.Conn, hub *Hub) *Client {
+func NewClient(conn *websocket.Conn, hub *Hub, srv *service.Service) *Client {
 	return &Client{
 		conn: conn,
 		send: make(chan model.Message),
 		hub:  hub,
+		srv:  srv,
 	}
 }
 
