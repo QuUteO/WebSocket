@@ -1,7 +1,6 @@
 /ideas
 /init.sql
-/internal/db/migrations
 *.xml
 *.iml
-/internal/user/repository
 *.yaml
+*.idea
