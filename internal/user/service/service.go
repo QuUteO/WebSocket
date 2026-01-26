@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/QuUteO/video-communication/internal/model"
 	"github.com/QuUteO/video-communication/internal/user/repository"
@@ -15,11 +16,27 @@ type Service interface {
 	UpdateUser(ctx context.Context, id string, email string, password string) error
 	FindAllUser(ctx context.Context) ([]model.DTOResponse, error)
 	FindUserById(ctx context.Context, id string) (*model.User, error)
+
+	SaveMsg(ctx context.Context, msg model.Message) error
 }
 
 type service struct {
 	repository repository.Repository
 	logger     *slog.Logger
+}
+
+func (s *service) SaveMsg(ctx context.Context, msg model.Message) error {
+	const op = "./internal/server/repository/SaveMsg"
+	s.logger.With("op: ", op)
+
+	msg.Time = time.Now().Format("15:04")
+
+	if err := s.repository.SaveMsg(ctx, msg); err != nil {
+		s.logger.Error("Error saving message: ", slog.Any("err", err))
+		return err
+	}
+
+	return nil
 }
 
 func (s *service) CreateUser(ctx context.Context, email string, password string) (uuid.UUID, error) {

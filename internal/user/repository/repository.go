@@ -18,11 +18,30 @@ type Repository interface {
 	FindByID(ctx context.Context, id string) (*model.User, error)
 	Update(ctx context.Context, user *model.User) error
 	Delete(ctx context.Context, id string) error
+
+	SaveMsg(ctx context.Context, msg model.Message) error
 }
 
 type repository struct {
 	client postgres.Client
 	logger *slog.Logger
+}
+
+func (r *repository) SaveMsg(ctx context.Context, msg model.Message) error {
+	const op = "./internal/server/repository/SaveMsg"
+	r.logger.With("op:", op)
+
+	q := `
+		INSERT INTO message (text, username, created_at)
+		VALUES ($1, $2, $3)
+	`
+
+	if _, err := r.client.Exec(ctx, q, msg.Msg, msg.User, msg.Time); err != nil {
+		r.logger.Info("Error saving message", slog.Any("error", err))
+		return fmt.Errorf("%w: %s", err, msg)
+	}
+
+	return nil
 }
 
 func (r *repository) Create(ctx context.Context, user *model.User) (uuid.UUID, error) {

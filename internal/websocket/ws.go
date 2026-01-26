@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/QuUteO/video-communication/internal/user/service"
 	"github.com/gorilla/websocket"
 )
 
@@ -12,13 +13,15 @@ type WebSocket struct {
 	logger   *slog.Logger
 	upgrader *websocket.Upgrader
 	hub      *Hub
+	service  *service.Service
 }
 
-func NewWebSocket(hub *Hub, logger *slog.Logger) *WebSocket {
+func NewWebSocket(hub *Hub, logger *slog.Logger, srv *service.Service) *WebSocket {
 	return &WebSocket{
+		logger:   logger,
 		upgrader: &websocket.Upgrader{},
 		hub:      hub,
-		logger:   logger,
+		service:  srv,
 	}
 }
 
@@ -29,7 +32,7 @@ func (ws *WebSocket) WebSocketHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ws.logger.Info("WebSocket connection: %s", conn.RemoteAddr().String())
 
-	client := NewClient(conn, ws.hub)
+	client := NewClient(conn, ws.hub, *ws.service)
 	client.hub.register <- client
 
 	go client.WritePump()

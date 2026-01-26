@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"context"
 	"log"
 
 	"github.com/QuUteO/video-communication/internal/model"
@@ -12,10 +13,10 @@ type Client struct {
 	conn *websocket.Conn
 	send chan model.Message
 	hub  *Hub
-	srv  *service.Service
+	srv  service.Service
 }
 
-func NewClient(conn *websocket.Conn, hub *Hub, srv *service.Service) *Client {
+func NewClient(conn *websocket.Conn, hub *Hub, srv service.Service) *Client {
 	return &Client{
 		conn: conn,
 		send: make(chan model.Message),
@@ -42,6 +43,11 @@ func (c *Client) ReadPump() {
 		if err := c.conn.ReadJSON(&msg); err != nil {
 			log.Printf("Error reading websocket message:")
 			break
+		}
+
+		if err := c.srv.SaveMsg(context.TODO(), msg); err != nil {
+			log.Printf("Error saving message: %v", err)
+			continue
 		}
 
 		c.hub.broadcast <- msg
