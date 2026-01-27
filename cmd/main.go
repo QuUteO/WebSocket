@@ -45,8 +45,8 @@ func main() {
 	handle := handler.NewUserHandler(srv, log)
 
 	// websocket
-	hub := websocket.NewHub()
-	wsHandle := websocket.NewWebSocket(hub, log, srv)
+	hub := websocket.NewHub(log)
+	wsHandle := websocket.NewHandlerWS(hub, srv, log)
 	go hub.Run()
 
 	// routes
