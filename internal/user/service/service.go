@@ -47,7 +47,9 @@ func (s *service) SaveMsg(ctx context.Context, msg model.Message) error {
 	const op = "./internal/server/repository/SaveMsg"
 	s.logger.With("op: ", op)
 
-	msg.Time = time.Now()
+	if msg.Time.IsZero() {
+		msg.Time = time.Now()
+	}
 
 	if err := s.repository.SaveMsg(ctx, msg); err != nil {
 		s.logger.Error("Error saving message: ", slog.Any("err", err))
