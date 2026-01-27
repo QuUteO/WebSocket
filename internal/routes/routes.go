@@ -9,10 +9,10 @@ import (
 
 type Route struct {
 	UserHandler      *handler.UserHandler
-	WebSocketHandler *websocket.WebSocket
+	WebSocketHandler *websocket.HandlerWS
 }
 
-func NewRoute(userHandler *handler.UserHandler, WebSocketHandler *websocket.WebSocket) *Route {
+func NewRoute(userHandler *handler.UserHandler, WebSocketHandler *websocket.HandlerWS) *Route {
 	return &Route{
 		UserHandler:      userHandler,
 		WebSocketHandler: WebSocketHandler,
