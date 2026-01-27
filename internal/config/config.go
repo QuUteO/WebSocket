@@ -22,7 +22,7 @@ type Postgres struct {
 	Host        string `yaml:"host" env:"HOST" env-default:"localhost"`
 	Port        int    `yaml:"port" env:"PORT" env-default:"5432"`
 	DB          string `yaml:"db" env:"DB" env-default:"postgres"`
-	User        string `yaml:"server" env:"USER" env-default:"root"`
+	User        string `yaml:"user" env:"USER" env-default:"root"`
 	Password    string `yaml:"password" env:"PASSWORD" env-default:"1234"`
 	MaxAttempts int    `yaml:"max_attempts" env:"MAX_ATTEMPTS" env-default:"5"`
 }
