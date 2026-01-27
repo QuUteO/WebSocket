@@ -1,10 +1,15 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/gofrs/uuid"
+)
 
 type Message struct {
-	User    string    `json:"user"`
-	Msg     string    `json:"msg"`
-	Channel string    `json:"channel"`
-	Time    time.Time `json:"time"`
+	ID      uuid.UUID `json:"id"`
+	User    string    `json:"user"`    // отправитель
+	Msg     string    `json:"msg"`     // текст пользователя
+	Channel string    `json:"channel"` // канал, в котором пользователь зарегистрировался
+	Time    time.Time `json:"time"`    // время отправки сообщения отправителем
 }
