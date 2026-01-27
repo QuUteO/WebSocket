@@ -2,52 +2,81 @@ package websocket
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/QuUteO/video-communication/internal/user/service"
 	"github.com/gorilla/websocket"
 )
 
-type WebSocket struct {
+type HandlerWS struct {
+	upgrader websocket.Upgrader
 	logger   *slog.Logger
-	upgrader *websocket.Upgrader
 	hub      *Hub
 	service  service.Service
 }
 
-func NewWebSocket(hub *Hub, logger *slog.Logger, srv service.Service) *WebSocket {
-	return &WebSocket{
-		logger:   logger,
-		upgrader: &websocket.Upgrader{},
-		hub:      hub,
-		service:  srv,
+func NewHandlerWS(hub *Hub, service service.Service, logger *slog.Logger) *HandlerWS {
+	return &HandlerWS{
+		upgrader: websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+			CheckOrigin: func(r *http.Request) bool {
+				// TODO: CORS правильно настроить
+				return true
+			},
+		},
+		hub:     hub,
+		service: service,
+		logger:  logger,
 	}
 }
 
-func (ws *WebSocket) WebSocketHTTP(w http.ResponseWriter, r *http.Request) {
-	conn, err := ws.upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Printf("Error upgrading websocket connection: %v \n", err.Error())
-	}
-	ws.logger.Info("WebSocket connection: %s", conn.RemoteAddr().String())
+func (h *HandlerWS) WebSocketHTTP(w http.ResponseWriter, r *http.Request) {
+	const op = "WebSocketHTTP"
+	h.logger.With("op: ", op)
 
-	client := NewClient(conn, ws.hub, ws.service)
-	client.hub.register <- client
+	userID := r.URL.Query().Get("user_id")
+	username := r.URL.Query().Get("username")
+
+	// ДОБАВИЛ DeepSeek: Генерация значений если не переданы
+	if userID == "" {
+		userID = "user_" + time.Now().Format("20060102150405")
+	}
+	if username == "" {
+		username = "User_" + userID[len(userID)-6:]
+	}
+
+	conn, err := h.upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		h.logger.Error("Error upgrading websocket connection", slog.String("error", err.Error()))
+		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
+		return
+	}
+
+	client := NewClient(userID, username, conn, h.service, h.hub, h.logger)
+
+	// запуск обработчиков
+	go client.ReadPump()
+	go client.WritePump()
 
 	go func() {
-		history, err := ws.service.GetMessageByChannel(context.TODO(), "general")
-		if err != nil {
-			ws.logger.Error("failed to load history", slog.Any("err", err))
-			return
+		time.Sleep(1 * time.Second)
+
+		// ДОБАВИЛ DeepSeek: Загрузка истории общего канала
+		ctx := context.Background()
+		messages, err := h.service.GetMessageByChannel(ctx, "general")
+		if err == nil {
+			for _, msg := range messages {
+				client.Send <- msg
+			}
 		}
 
-		for _, msg := range history {
-			client.send <- msg
+		joinMsg := map[string]interface{}{
+			"type":    "join",
+			"channel": "general",
 		}
+		client.handleMessage(joinMsg)
 	}()
-
-	go client.WritePump()
-	go client.ReadPump()
 }
