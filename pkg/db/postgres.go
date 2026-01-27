@@ -23,7 +23,7 @@ func NewClient(ctx context.Context, ps *config.Postgres) (pool *pgxpool.Pool, er
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 
 	pool, err = pgxpool.Connect(ctx, dsn)
-	cancel()
+	defer cancel()
 	if err == nil {
 		return pool, nil
 	}

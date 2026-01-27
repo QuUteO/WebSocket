@@ -20,6 +20,7 @@ type Repository interface {
 	Delete(ctx context.Context, id string) error
 
 	SaveMsg(ctx context.Context, msg model.Message) error
+	GetMessagesByChannel(ctx context.Context, channel string) ([]model.Message, error)
 }
 
 type repository struct {
@@ -27,17 +28,56 @@ type repository struct {
 	logger *slog.Logger
 }
 
+func (r *repository) GetMessagesByChannel(ctx context.Context, channel string) ([]model.Message, error) {
+	const op = "./internal/server/repository/GetMessagesByChannel"
+	r.logger.With("op: ", op)
+
+	q := `SELECT text, channel, username, created_at 
+		FROM message 
+		WHERE channel = $1
+		ORDER BY created_at DESC
+		LIMIT 10
+`
+
+	var messages []model.Message
+
+	rows, err := r.client.Query(ctx, q, channel)
+	if err != nil {
+		r.logger.Error("error querying message: ", slog.String("error", err.Error()))
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var msg model.Message
+
+		if err := rows.Scan(
+			&msg.User,
+			&msg.Msg,
+			&msg.Channel,
+			&msg.Time,
+		); err != nil {
+			r.logger.Error("error scanning message: ", slog.String("error", err.Error()))
+			return nil, err
+		}
+
+		messages = append(messages, msg)
+	}
+
+	return messages, nil
+}
+
 func (r *repository) SaveMsg(ctx context.Context, msg model.Message) error {
 	const op = "./internal/server/repository/SaveMsg"
 	r.logger.With("op:", op)
 
 	q := `
-		INSERT INTO message (text, username, created_at)
-		VALUES ($1, $2, $3)
+		INSERT INTO message (text, channel, username, created_at)
+		VALUES ($1, $2, $3, $4)
 	`
 
-	if _, err := r.client.Exec(ctx, q, msg.Msg, msg.User, msg.Time); err != nil {
-		r.logger.Info("Error saving message", slog.Any("error", err))
+	if _, err := r.client.Exec(ctx, q, msg.Msg, msg.Channel, msg.User, msg.Time); err != nil {
+		r.logger.Info("Error saving message", slog.String("error", err.Error()))
 		return fmt.Errorf("%w: %s", err, msg)
 	}
 
@@ -57,7 +97,7 @@ func (r *repository) Create(ctx context.Context, user *model.User) (uuid.UUID, e
 	if err := r.client.QueryRow(ctx, q, user.Email, user.Password).Scan(&user.Id); err != nil {
 		var PGerr *pgconn.PgError
 		if errors.As(err, &PGerr) {
-			r.logger.Info(fmt.Sprintf("QueryRow failed: %s Code: %s Where: %s SQL State: %s", PGerr.Message, PGerr.Code, PGerr.Where, PGerr.SQLState()))
+			r.logger.Error(fmt.Sprintf("QueryRow failed: %s Code: %s Where: %s SQL State: %s", PGerr.Message, PGerr.Code, PGerr.Where, PGerr.SQLState()))
 		}
 		return uuid.UUID{}, err
 	}
@@ -76,7 +116,7 @@ func (r *repository) FindAll(ctx context.Context) ([]model.DTOResponse, error) {
 	var users []model.DTOResponse
 	rows, err := r.client.Query(ctx, q)
 	if err != nil {
-		r.logger.Info(fmt.Sprintf("Query failed: %s", err.Error()))
+		r.logger.Error("Error querying users: ", slog.String("error", err.Error()))
 		return nil, err
 	}
 
@@ -102,7 +142,7 @@ func (r *repository) FindByID(ctx context.Context, id string) (*model.User, erro
 
 	var user model.User
 	if err := r.client.QueryRow(ctx, q, id).Scan(&user.Id, &user.Email); err != nil {
-		r.logger.Info(fmt.Sprintf("Query failed: %s", err.Error()))
+		r.logger.Info("Error querying user: ", slog.String("error", err.Error()))
 		return nil, err
 	}
 
@@ -120,7 +160,7 @@ func (r *repository) Update(ctx context.Context, user *model.User) error {
 	`
 
 	if _, err := r.client.Exec(ctx, q, user.Email, user.Password, user.Id); err != nil {
-		r.logger.Info(fmt.Sprintf("Query failed: %s", err.Error()))
+		r.logger.Error("Error updating user: ", slog.String("error", err.Error()))
 		return err
 	}
 	return nil
@@ -135,7 +175,7 @@ func (r *repository) Delete(ctx context.Context, id string) error {
 	`
 
 	if _, err := r.client.Exec(ctx, q, id); err != nil {
-		r.logger.Info(fmt.Sprintf("Query failed: %s", err.Error()))
+		r.logger.Error("Error deleting user: ", slog.String("error", err.Error()))
 		return err
 	}
 

@@ -18,6 +18,7 @@ type Service interface {
 	FindUserById(ctx context.Context, id string) (*model.User, error)
 
 	SaveMsg(ctx context.Context, msg model.Message) error
+	GetMessageByChannel(ctx context.Context, channel string) ([]model.Message, error)
 }
 
 type service struct {
@@ -25,11 +26,28 @@ type service struct {
 	logger     *slog.Logger
 }
 
+func (s *service) GetMessageByChannel(ctx context.Context, channel string) ([]model.Message, error) {
+	const op = "./internal/user/service.GetMessageByChannel"
+	s.logger.With("op: ", op)
+
+	insertMessage, err := s.repository.GetMessagesByChannel(ctx, channel)
+	if insertMessage == nil {
+		s.logger.Error("Error inserting insertMessage: ", slog.String("error", err.Error()))
+		return nil, err
+	}
+	if err != nil {
+		s.logger.Error("error inserting insertMessage: ", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	return insertMessage, nil
+}
+
 func (s *service) SaveMsg(ctx context.Context, msg model.Message) error {
 	const op = "./internal/server/repository/SaveMsg"
 	s.logger.With("op: ", op)
 
-	msg.Time = time.Now().Format("15:04")
+	msg.Time = time.Now()
 
 	if err := s.repository.SaveMsg(ctx, msg); err != nil {
 		s.logger.Error("Error saving message: ", slog.Any("err", err))

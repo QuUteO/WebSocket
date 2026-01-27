@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"context"
 	"log"
 	"log/slog"
 	"net/http"
@@ -13,10 +14,10 @@ type WebSocket struct {
 	logger   *slog.Logger
 	upgrader *websocket.Upgrader
 	hub      *Hub
-	service  *service.Service
+	service  service.Service
 }
 
-func NewWebSocket(hub *Hub, logger *slog.Logger, srv *service.Service) *WebSocket {
+func NewWebSocket(hub *Hub, logger *slog.Logger, srv service.Service) *WebSocket {
 	return &WebSocket{
 		logger:   logger,
 		upgrader: &websocket.Upgrader{},
@@ -32,8 +33,20 @@ func (ws *WebSocket) WebSocketHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ws.logger.Info("WebSocket connection: %s", conn.RemoteAddr().String())
 
-	client := NewClient(conn, ws.hub, *ws.service)
+	client := NewClient(conn, ws.hub, ws.service)
 	client.hub.register <- client
+
+	go func() {
+		history, err := ws.service.GetMessageByChannel(context.TODO(), "general")
+		if err != nil {
+			ws.logger.Error("failed to load history", slog.Any("err", err))
+			return
+		}
+
+		for _, msg := range history {
+			client.send <- msg
+		}
+	}()
 
 	go client.WritePump()
 	go client.ReadPump()
