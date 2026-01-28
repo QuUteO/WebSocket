@@ -26,35 +26,6 @@ type service struct {
 	logger     *slog.Logger
 }
 
-func (s *service) GetMessageByChannel(ctx context.Context, channel string) ([]model.Message, error) {
-	const op = "./internal/user/service.GetMessageByChannel"
-	s.logger.With("op: ", op)
-
-	message, err := s.repository.GetMessagesByChannel(ctx, channel)
-	if err != nil {
-		s.logger.Error("error inserting insertMessage: ", slog.String("error", err.Error()))
-		return nil, err
-	}
-
-	return message, nil
-}
-
-func (s *service) SaveMsg(ctx context.Context, msg model.Message) error {
-	const op = "./internal/server/repository/SaveMsg"
-	s.logger.With("op: ", op)
-
-	if msg.Time.IsZero() {
-		msg.Time = time.Now()
-	}
-
-	if err := s.repository.SaveMsg(ctx, msg); err != nil {
-		s.logger.Error("Error saving message: ", slog.Any("err", err))
-		return err
-	}
-
-	return nil
-}
-
 func (s *service) CreateUser(ctx context.Context, email string, password string) (uuid.UUID, error) {
 	const op = "./internal/server/service.CreateUser"
 	s.logger.With("op:", op)
@@ -137,6 +108,35 @@ func (s *service) FindUserById(ctx context.Context, id string) (*model.User, err
 
 	s.logger.Info("Found server")
 	return user, nil
+}
+
+func (s *service) GetMessageByChannel(ctx context.Context, channel string) ([]model.Message, error) {
+	const op = "./internal/user/service.GetMessageByChannel"
+	s.logger.With("op: ", op)
+
+	message, err := s.repository.GetMessagesByChannel(ctx, channel)
+	if err != nil {
+		s.logger.Error("error inserting insertMessage: ", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	return message, nil
+}
+
+func (s *service) SaveMsg(ctx context.Context, msg model.Message) error {
+	const op = "./internal/server/repository/SaveMsg"
+	s.logger.With("op: ", op)
+
+	if msg.Time.IsZero() {
+		msg.Time = time.Now()
+	}
+
+	if err := s.repository.SaveMsg(ctx, msg); err != nil {
+		s.logger.Error("Error saving message: ", slog.Any("err", err))
+		return err
+	}
+
+	return nil
 }
 
 func NewService(repository repository.Repository, logger *slog.Logger) Service {
