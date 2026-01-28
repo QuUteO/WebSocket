@@ -28,69 +28,6 @@ type repository struct {
 	logger *slog.Logger
 }
 
-func (r *repository) GetMessagesByChannel(ctx context.Context, channel string) ([]model.Message, error) {
-	const op = "./internal/server/repository/GetMessagesByChannel"
-	r.logger.With("op: ", op)
-
-	q := `SELECT id, msg, channel, username, created_at 
-		FROM message 
-		WHERE channel = $1
-		ORDER BY created_at DESC
-		LIMIT 100
-		`
-
-	var messages []model.Message
-
-	rows, err := r.client.Query(ctx, q, channel)
-	if err != nil {
-		r.logger.Error("error querying message: ", slog.String("error", err.Error()))
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var msg model.Message
-
-		if err := rows.Scan(
-			&msg.ID,
-			&msg.Msg,
-			&msg.Channel,
-			&msg.User,
-			&msg.Time,
-		); err != nil {
-			r.logger.Error("error scanning message", slog.String("error", err.Error()))
-			return nil, err
-		}
-
-		messages = append(messages, msg)
-	}
-
-	return messages, nil
-}
-
-func (r *repository) SaveMsg(ctx context.Context, msg model.Message) error {
-	const op = "./internal/server/repository/SaveMsg"
-	r.logger.With("op:", op)
-
-	q := `
-		INSERT INTO message (id, msg, channel, username, created_at)
-		VALUES ($1, $2, $3, $4, $5)
-	`
-
-	if _, err := r.client.Exec(ctx, q,
-		msg.ID,
-		msg.Msg,
-		msg.Channel,
-		msg.User,
-		msg.Time,
-	); err != nil {
-		r.logger.Info("Error saving message", slog.String("error", err.Error()))
-		return fmt.Errorf("%w: %s", err, msg)
-	}
-
-	return nil
-}
-
 func (r *repository) Create(ctx context.Context, user *model.User) (uuid.UUID, error) {
 	const op = "./internal/server/repository/Create"
 	r.logger.With("op:", op)
@@ -184,6 +121,69 @@ func (r *repository) Delete(ctx context.Context, id string) error {
 	if _, err := r.client.Exec(ctx, q, id); err != nil {
 		r.logger.Error("Error deleting user: ", slog.String("error", err.Error()))
 		return err
+	}
+
+	return nil
+}
+
+func (r *repository) GetMessagesByChannel(ctx context.Context, channel string) ([]model.Message, error) {
+	const op = "./internal/server/repository/GetMessagesByChannel"
+	r.logger.With("op: ", op)
+
+	q := `SELECT id, msg, channel, username, created_at 
+		FROM message 
+		WHERE channel = $1
+		ORDER BY created_at DESC
+		LIMIT 100
+		`
+
+	var messages []model.Message
+
+	rows, err := r.client.Query(ctx, q, channel)
+	if err != nil {
+		r.logger.Error("error querying message: ", slog.String("error", err.Error()))
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var msg model.Message
+
+		if err := rows.Scan(
+			&msg.ID,
+			&msg.Msg,
+			&msg.Channel,
+			&msg.User,
+			&msg.Time,
+		); err != nil {
+			r.logger.Error("error scanning message", slog.String("error", err.Error()))
+			return nil, err
+		}
+
+		messages = append(messages, msg)
+	}
+
+	return messages, nil
+}
+
+func (r *repository) SaveMsg(ctx context.Context, msg model.Message) error {
+	const op = "./internal/server/repository/SaveMsg"
+	r.logger.With("op:", op)
+
+	q := `
+		INSERT INTO message (id, msg, channel, username, created_at)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+
+	if _, err := r.client.Exec(ctx, q,
+		msg.ID,
+		msg.Msg,
+		msg.Channel,
+		msg.User,
+		msg.Time,
+	); err != nil {
+		r.logger.Info("Error saving message", slog.String("error", err.Error()))
+		return fmt.Errorf("%w: %s", err, msg)
 	}
 
 	return nil
