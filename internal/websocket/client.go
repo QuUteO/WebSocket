@@ -37,30 +37,35 @@ func NewClient(clientID, username string, conn *websocket.Conn, srv service.Serv
 
 func (c *Client) ReadPump() {
 	defer func() {
+		c.Hub.mu.Lock()
 		if c.CurrentChannel != "" {
 			c.Hub.unregister <- &ClientRegistration{
 				Client:  c,
 				Channel: c.CurrentChannel,
 			}
 		}
+		c.Hub.mu.Unlock()
 
-		err := c.Conn.Close()
-		if err != nil {
-			return
+		// Закрываем соединение
+		if c.Conn != nil {
+			c.Conn.Close()
 		}
-	}()
 
-	c.Conn.SetReadLimit(1024 * 1024) // 1MB
-	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-	c.Conn.SetPongHandler(func(string) error {
-		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-		return nil
-	})
+		c.Logger.Info("read pump stopped", slog.String("client_id", c.ID))
+	}()
 
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
-			c.Logger.Error("Error reading from websocket:", slog.String("error", err.Error()))
+			if websocket.IsUnexpectedCloseError(err,
+				websocket.CloseGoingAway,
+				websocket.CloseAbnormalClosure,
+				websocket.CloseNormalClosure) {
+				c.Logger.Debug("websocket closed", slog.String("error", err.Error()))
+			} else {
+				c.Logger.Error("error reading from websocket", slog.String("error", err.Error()))
+			}
+			break
 		}
 
 		c.handleReadMessage(message)
@@ -75,7 +80,6 @@ func (c *Client) handleReadMessage(data []byte) {
 		return
 	}
 
-	// type является строкой или нет
 	msgType, ok := rawMsg["type"].(string)
 	if !ok {
 		c.Logger.Error("message type is required")
@@ -106,6 +110,8 @@ func (c *Client) handleJoinMessage(rawMsg map[string]interface{}) {
 			Channel: c.CurrentChannel,
 		}
 	}
+
+	c.CurrentChannel = channel
 
 	c.Hub.register <- &ClientRegistration{
 		Client:  c,
@@ -185,12 +191,12 @@ func (c *Client) handleLeave() {
 		Channel: c.CurrentChannel,
 	}
 
-	repsonse := map[string]interface{}{
+	response := map[string]interface{}{
 		"type":    "leave",
 		"channel": c.CurrentChannel,
 		"user":    c.Username,
 	}
-	c.Conn.WriteJSON(repsonse)
+	c.Conn.WriteJSON(response)
 
 	c.CurrentChannel = ""
 }
@@ -199,7 +205,14 @@ func (c *Client) WritePump() {
 	ticker := time.NewTicker(54 * time.Second)
 	defer func() {
 		ticker.Stop()
-		c.Conn.Close()
+
+		if c.Conn != nil {
+			c.Conn.Close()
+		}
+
+		close(c.Send)
+
+		c.Logger.Info("write pump stopped", slog.String("client_id", c.ID))
 	}()
 
 	for {
@@ -211,10 +224,18 @@ func (c *Client) WritePump() {
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
+
+			defer func() {
+				if r := recover(); r != nil {
+					c.Logger.Error("panic in WritePump", slog.Any("recover", r))
+				}
+			}()
+
 			if err := c.Conn.WriteJSON(message); err != nil {
 				c.Logger.Error("Error sending message:", slog.String("error", err.Error()))
 				return
 			}
+
 		case <-ticker.C:
 			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {

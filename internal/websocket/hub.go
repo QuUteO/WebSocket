@@ -31,6 +31,7 @@ func NewHub(logger *slog.Logger) *Hub {
 		register:   make(chan *ClientRegistration),
 		unregister: make(chan *ClientRegistration),
 		broadcast:  make(chan model.Message),
+		mu:         &sync.RWMutex{},
 		logger:     logger,
 	}
 }
@@ -44,9 +45,11 @@ func (h *Hub) Run() {
 			h.registerClientToChannel(registration.Client, registration.Channel)
 
 		case registration := <-h.unregister:
+
 			h.unregisterClientToChannel(registration.Client, registration.Channel)
 
 		case msg := <-h.broadcast:
+
 			h.broadcastToChannel(msg)
 		}
 
