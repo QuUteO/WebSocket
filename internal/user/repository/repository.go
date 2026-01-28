@@ -16,6 +16,7 @@ type Repository interface {
 	Create(ctx context.Context, user *model.User) (uuid.UUID, error)
 	FindAll(ctx context.Context) ([]model.DTOResponse, error)
 	FindByID(ctx context.Context, id string) (*model.User, error)
+	FindByEmail(ctx context.Context, email string) (*model.User, error)
 	Update(ctx context.Context, user *model.User) error
 	Delete(ctx context.Context, id string) error
 
@@ -86,6 +87,23 @@ func (r *repository) FindByID(ctx context.Context, id string) (*model.User, erro
 
 	var user model.User
 	if err := r.client.QueryRow(ctx, q, id).Scan(&user.Id, &user.Email); err != nil {
+		r.logger.Info("Error querying user: ", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (r *repository) FindByEmail(ctx context.Context, email string) (*model.User, error) {
+	const op = "./internal/server/repository/FindByEmail"
+	r.logger.With("op:", op)
+
+	q := `
+	SELECT id, email FROM users WHERE email = $1
+	`
+
+	var user model.User
+	if err := r.client.QueryRow(ctx, q, email).Scan(&user.Id, &user.Email, &user.Password); err != nil {
 		r.logger.Info("Error querying user: ", slog.String("error", err.Error()))
 		return nil, err
 	}
