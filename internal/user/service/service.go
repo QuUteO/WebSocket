@@ -30,17 +30,13 @@ func (s *service) GetMessageByChannel(ctx context.Context, channel string) ([]mo
 	const op = "./internal/user/service.GetMessageByChannel"
 	s.logger.With("op: ", op)
 
-	insertMessage, err := s.repository.GetMessagesByChannel(ctx, channel)
-	if insertMessage == nil {
-		s.logger.Error("Error inserting insertMessage: ", slog.String("error", err.Error()))
-		return nil, err
-	}
+	message, err := s.repository.GetMessagesByChannel(ctx, channel)
 	if err != nil {
 		s.logger.Error("error inserting insertMessage: ", slog.String("error", err.Error()))
 		return nil, err
 	}
 
-	return insertMessage, nil
+	return message, nil
 }
 
 func (s *service) SaveMsg(ctx context.Context, msg model.Message) error {
