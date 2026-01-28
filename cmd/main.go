@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/QuUteO/video-communication/internal/config"
 	"github.com/QuUteO/video-communication/internal/logger"
@@ -32,6 +33,10 @@ func main() {
 
 	// logger initialization
 	log := logger.New(cfg.Env)
+	if log == nil {
+		fmt.Println("logger.New() returned nil!")
+		os.Exit(1)
+	}
 
 	// data base initialization
 	client, err := postgres.NewClient(ctx, &cfg.Postgres)
