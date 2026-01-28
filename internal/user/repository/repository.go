@@ -32,12 +32,12 @@ func (r *repository) GetMessagesByChannel(ctx context.Context, channel string) (
 	const op = "./internal/server/repository/GetMessagesByChannel"
 	r.logger.With("op: ", op)
 
-	q := `SELECT msg, channel, username, created_at 
+	q := `SELECT id, msg, channel, username, created_at 
 		FROM message 
 		WHERE channel = $1
 		ORDER BY created_at DESC
 		LIMIT 100
-`
+		`
 
 	var messages []model.Message
 
@@ -53,12 +53,12 @@ func (r *repository) GetMessagesByChannel(ctx context.Context, channel string) (
 
 		if err := rows.Scan(
 			&msg.ID,
-			&msg.User,
 			&msg.Msg,
 			&msg.Channel,
+			&msg.User,
 			&msg.Time,
 		); err != nil {
-			r.logger.Error("error scanning message: ", slog.String("error", err.Error()))
+			r.logger.Error("error scanning message", slog.String("error", err.Error()))
 			return nil, err
 		}
 
@@ -73,8 +73,8 @@ func (r *repository) SaveMsg(ctx context.Context, msg model.Message) error {
 	r.logger.With("op:", op)
 
 	q := `
-		INSERT INTO message (msg, channel, username, created_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO message (id, msg, channel, username, created_at)
+		VALUES ($1, $2, $3, $4, $5)
 	`
 
 	if _, err := r.client.Exec(ctx, q,
