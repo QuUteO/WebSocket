@@ -40,7 +40,6 @@ func (h *HandlerWS) WebSocketHTTP(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("user_id")
 	username := r.URL.Query().Get("username")
 
-	// ДОБАВИЛ DeepSeek: Генерация значений если не переданы
 	if userID == "" {
 		userID = "user_" + time.Now().Format("20060102150405")
 	}
@@ -64,7 +63,6 @@ func (h *HandlerWS) WebSocketHTTP(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		time.Sleep(1 * time.Second)
 
-		// ДОБАВИЛ DeepSeek: Загрузка истории общего канала
 		ctx := context.Background()
 		messages, err := h.service.GetMessageByChannel(ctx, "general")
 		if err == nil {
@@ -73,10 +71,10 @@ func (h *HandlerWS) WebSocketHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		joinMsg := map[string]interface{}{
-			"type":    "join",
-			"channel": "general",
+		client.CurrentChannel = "general"
+		h.hub.register <- &ClientRegistration{
+			Client:  client,
+			Channel: "general",
 		}
-		client.handleMessage(joinMsg)
 	}()
 }
