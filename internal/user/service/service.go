@@ -8,6 +8,7 @@ import (
 	"github.com/QuUteO/video-communication/internal/model"
 	"github.com/QuUteO/video-communication/internal/user/repository"
 	"github.com/gofrs/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Service interface {
@@ -30,9 +31,14 @@ func (s *service) CreateUser(ctx context.Context, email string, password string)
 	const op = "./internal/server/service.CreateUser"
 	s.logger.With("op:", op)
 
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
 	user := &model.User{
 		Email:    email,
-		Password: password,
+		Password: string(hash),
 	}
 
 	id, err := s.repository.Create(ctx, user)
