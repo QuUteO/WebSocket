@@ -2,65 +2,39 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/QuUteO/video-communication/internal/config"
-	"github.com/QuUteO/video-communication/internal/logger"
-	"github.com/QuUteO/video-communication/internal/routes"
-	"github.com/QuUteO/video-communication/internal/user/handler"
-	"github.com/QuUteO/video-communication/internal/user/repository"
-	"github.com/QuUteO/video-communication/internal/user/service"
-	"github.com/QuUteO/video-communication/internal/websocket"
-	"github.com/QuUteO/video-communication/pkg/db"
-	"github.com/go-chi/chi/v5"
+	"github.com/QuUteO/video-communication/internal/app"
 )
 
-// go run ./cmd/main.go to run the application
 func main() {
-	// ctx
-	ctx := context.Background()
-
-	// router
-	r := chi.NewRouter()
-
-	// config initialization
-	cfg, err := config.New()
+	// Создание приложения
+	application, err := app.New()
 	if err != nil {
-		fmt.Println("failed to load config:", err)
+		panic(err)
 	}
 
-	// logger initialization
-	log := logger.New(cfg.Env)
-	if log == nil {
-		fmt.Println("logger.New() returned nil!")
-		os.Exit(1)
+	// Канал для обработки сигналов
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	// Запуск сервера в горутине
+	go func() {
+		if err := application.Run(); err != nil {
+			panic(err)
+		}
+	}()
+
+	// Ожидание сигнала для graceful shutdown
+	<-stop
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := application.Shutdown(ctx); err != nil {
+		panic(err)
 	}
-
-	// data base initialization
-	client, err := postgres.NewClient(ctx, &cfg.Postgres)
-	if err != nil {
-		log.Error("failed to connect to database", "error", err)
-	}
-
-	// service
-	repo := repository.NewRepository(client, log)
-	srv := service.NewService(repo, log)
-	handle := handler.NewUserHandler(srv, log)
-
-	// websocket
-	hub := websocket.NewHub(log)
-	wsHandle := websocket.NewHandlerWS(hub, srv, log)
-	go hub.Run()
-
-	// routes
-	route := routes.NewRoute(handle, wsHandle)
-	route.RegisterRoutes(r)
-
-	log.Info("Starting server")
-	if err := http.ListenAndServe(cfg.HTTPServer.Addr, r); err != nil {
-		log.Error("failed to start http server", "error", err)
-	}
-	// graceful shutdown
 }
