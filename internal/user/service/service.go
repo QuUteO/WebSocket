@@ -29,7 +29,7 @@ type service struct {
 
 func (s *service) CreateUser(ctx context.Context, email string, password string) (uuid.UUID, error) {
 	const op = "./internal/server/service.CreateUser"
-	s.logger.With("op:", op)
+	log := s.logger.With("op:", op)
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -43,35 +43,35 @@ func (s *service) CreateUser(ctx context.Context, email string, password string)
 
 	id, err := s.repository.Create(ctx, user)
 	if err != nil {
-		s.logger.Error("Failed to create server", "error:", err, "email:", email)
+		log.Error("Failed to create server", "error:", err, "email:", email)
 		return uuid.Nil, err
 	}
 
-	s.logger.Info("Created server")
+	log.Info("Created server")
 	return id, nil
 }
 
 func (s *service) DeleteUser(ctx context.Context, id string) error {
 	const op = "./internal/server/service.DeleteUser"
-	s.logger.With("op:", op)
+	log := s.logger.With("op:", op)
 
 	err := s.repository.Delete(ctx, id)
 	if err != nil {
-		s.logger.Error("Failed to delete server", "error:", err, "id", id)
+		log.Error("Failed to delete server", "error:", err, "id", id)
 		return err
 	}
 
-	s.logger.Info("Deleted server")
+	log.Info("Deleted server")
 	return nil
 }
 
 func (s *service) UpdateUser(ctx context.Context, id string, email string, password string) error {
 	const op = "./internal/server/service.UpdateUser"
-	s.logger.With("op:", op)
+	log := s.logger.With("op:", op)
 
 	user, err := s.repository.FindByID(ctx, id)
 	if err != nil {
-		s.logger.Error("Failed to find server", "error:", err, "id", id)
+		log.Error("Failed to find server", "error:", err, "id", id)
 		return err
 	}
 
@@ -85,44 +85,44 @@ func (s *service) UpdateUser(ctx context.Context, id string, email string, passw
 		return err
 	}
 
-	s.logger.Info("Updated server")
+	log.Info("Updated server")
 	return nil
 }
 
 func (s *service) FindAllUser(ctx context.Context) ([]model.DTOResponse, error) {
 	const op = "./internal/server/service.FindAllUser"
-	s.logger.With("op:", op)
+	log := s.logger.With("op:", op)
 
 	users, err := s.repository.FindAll(ctx)
 	if err != nil {
-		s.logger.Error("Failed to find all users", "error:", err, "users", users)
+		log.Error("Failed to find all users", "error:", err, "users", users)
 		return nil, err
 	}
 
-	s.logger.Info("Found all users")
+	log.Info("Found all users")
 	return users, nil
 }
 
 func (s *service) FindUserById(ctx context.Context, id string) (*model.User, error) {
 	const op = "./internal/server/service.FindUserById"
-	s.logger.With("op:", op)
+	log := s.logger.With("op:", op)
 
 	user, err := s.repository.FindByID(ctx, id)
 	if err != nil {
-		s.logger.Error("Failed to find server", "error:", err, "id", id)
+		log.Error("Failed to find server", "error:", err, "id", id)
 	}
 
-	s.logger.Info("Found server")
+	log.Info("Found server")
 	return user, nil
 }
 
 func (s *service) GetMessageByChannel(ctx context.Context, channel string) ([]model.Message, error) {
 	const op = "./internal/user/service.GetMessageByChannel"
-	s.logger.With("op: ", op)
+	log := s.logger.With("op: ", op)
 
 	message, err := s.repository.GetMessagesByChannel(ctx, channel)
 	if err != nil {
-		s.logger.Error("error inserting insertMessage: ", slog.String("error", err.Error()))
+		log.Error("error inserting insertMessage: ", slog.String("error", err.Error()))
 		return nil, err
 	}
 
@@ -131,14 +131,14 @@ func (s *service) GetMessageByChannel(ctx context.Context, channel string) ([]mo
 
 func (s *service) SaveMsg(ctx context.Context, msg model.Message) error {
 	const op = "./internal/server/repository/SaveMsg"
-	s.logger.With("op: ", op)
+	log := s.logger.With("op: ", op)
 
 	if msg.Time.IsZero() {
 		msg.Time = time.Now()
 	}
 
 	if err := s.repository.SaveMsg(ctx, msg); err != nil {
-		s.logger.Error("Error saving message: ", slog.Any("err", err))
+		log.Error("Error saving message: ", slog.Any("err", err))
 		return err
 	}
 

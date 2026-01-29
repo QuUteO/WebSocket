@@ -1,12 +1,17 @@
 package model
 
-import "github.com/gofrs/uuid"
+import (
+	"time"
+
+	"github.com/gofrs/uuid"
+)
 
 // User Структура для работы с БД
 type User struct {
-	Id       uuid.UUID `db:"id"`
-	Email    string    `db:"email"`
-	Password string    `db:"password"`
+	Id        uuid.UUID `db:"id"`
+	Email     string    `db:"email"`
+	Password  string    `db:"password"`
+	CreatedAt time.Time `db:"created_at"`
 }
 
 // DTOResponse Структура server для ответа
