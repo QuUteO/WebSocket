@@ -25,11 +25,11 @@ func NewUserHandler(srv service.Service, log *slog.Logger) *UserHandler {
 
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	const op = "./internal/server/handler/CreateUser"
-	h.logger.With("op", op)
+	log := h.logger.With("op", op)
 
 	var req model.DTORequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.logger.Error("Failed to decode JSON", slog.Any("error", err))
+		log.Error("Failed to decode JSON", slog.Any("error", err))
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, model.Response{
 			StatusCode: http.StatusBadRequest,
@@ -41,7 +41,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	_, err := h.service.CreateUser(ctx, req.Email, req.Password)
 	if err != nil {
-		h.logger.Error("Failed to create server", slog.Any("error", err))
+		log.Error("Failed to create server", slog.Any("error", err))
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, model.Response{
 			StatusCode: http.StatusInternalServerError,
@@ -60,12 +60,12 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	const op = "./internal/server/handler/FindUserById"
-	h.logger.With("op", op)
+	log := h.logger.With("op", op)
 
 	ctx := r.Context()
 	users, err := h.service.FindAllUser(ctx)
 	if err != nil {
-		h.logger.Error("Failed to find users", slog.Any("error", err))
+		log.Error("Failed to find users", slog.Any("error", err))
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, model.Response{
 			StatusCode: http.StatusInternalServerError,
@@ -85,14 +85,14 @@ func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	const op = "./internal/server/handler/FindUserById"
-	h.logger.With("op", op)
+	log := h.logger.With("op", op)
 
 	id := chi.URLParam(r, "id")
 
 	ctx := r.Context()
 	u, err := h.service.FindUserById(ctx, id)
 	if err != nil {
-		h.logger.Error("Failed to find server", slog.Any("error", err))
+		log.Error("Failed to find server", slog.Any("error", err))
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, model.Response{
 			StatusCode: http.StatusInternalServerError,
@@ -112,13 +112,13 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	const op = "./internal/server/handler/UpdateUserByID"
-	h.logger.With("op", op)
+	log := h.logger.With("op", op)
 
 	id := chi.URLParam(r, "id")
 
 	var req model.DTORequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.logger.Error("Failed to decode JSON", slog.Any("error", err))
+		log.Error("Failed to decode JSON", slog.Any("error", err))
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, model.Response{
 			StatusCode: http.StatusBadRequest,
@@ -129,7 +129,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	if err := h.service.UpdateUser(ctx, id, req.Email, req.Password); err != nil {
-		h.logger.Error("Failed to update server", slog.Any("error", err))
+		log.Error("Failed to update server", slog.Any("error", err))
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, model.Response{
 			StatusCode: http.StatusInternalServerError,
@@ -148,13 +148,13 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	const op = "./internal/server/handler/DeleteUserByID"
-	h.logger.With("op", op)
+	log := h.logger.With("op", op)
 
 	id := chi.URLParam(r, "id")
 
 	ctx := r.Context()
 	if err := h.service.DeleteUser(ctx, id); err != nil {
-		h.logger.Error("Failed to delete server", slog.Any("error", err))
+		log.Error("Failed to delete server", slog.Any("error", err))
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, model.Response{
 			StatusCode: http.StatusInternalServerError,
