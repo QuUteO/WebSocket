@@ -12,3 +12,7 @@ postgres:
   user: postgres
   password: postgres
   max_attempts: 3
+
+jwt:
+  secret: "super-ultra-secret-key"
+  ttl: 60s

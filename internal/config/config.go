@@ -7,9 +7,10 @@ import (
 )
 
 type Config struct {
-	Env        string     `yaml:"env" env:"ENV" env-default:"local"`
-	HTTPServer HTTPServer `yaml:"http_server" env-prefix:"HTTP_"`
-	Postgres   Postgres   `yaml:"postgres" env-prefix:"POSTGRES_"`
+	Env        string     `yaml:"env" env:"ENV" env-default:"local" env-required:"true"`
+	HTTPServer HTTPServer `yaml:"http_server"`
+	Postgres   Postgres   `yaml:"postgres"`
+	JWT        JWT        `yaml:"jwt"`
 }
 
 type HTTPServer struct {
@@ -19,12 +20,17 @@ type HTTPServer struct {
 }
 
 type Postgres struct {
-	Host        string `yaml:"host" env:"HOST" env-default:"localhost"`
-	Port        int    `yaml:"port" env:"PORT" env-default:"5432"`
-	DB          string `yaml:"db" env:"DB" env-default:"postgres"`
-	User        string `yaml:"user" env:"USER" env-default:"root"`
-	Password    string `yaml:"password" env:"PASSWORD" env-default:"1234"`
-	MaxAttempts int    `yaml:"max_attempts" env:"MAX_ATTEMPTS" env-default:"5"`
+	Host        string `yaml:"host" env-default:"localhost"`
+	Port        int    `yaml:"port" env-default:"5432"`
+	DB          string `yaml:"db" env-default:"postgres"`
+	User        string `yaml:"user" env-default:"postgres"`
+	Password    string `yaml:"password" env-default:"postgres"`
+	MaxAttempts int    `yaml:"max_attempts" env-default:"5"`
+}
+
+type JWT struct {
+	Secret string        `yaml:"secret" env:"JWT_SECRET" env-required:"true"`
+	Ttl    time.Duration `yaml:"ttl" env:"JWT_TTL" env-default:"24h"`
 }
 
 func New() (*Config, error) {
