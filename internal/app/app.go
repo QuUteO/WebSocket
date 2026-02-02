@@ -6,7 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
+	authhandler "github.com/QuUteO/video-communication/internal/auth/handler"
+	authjwt "github.com/QuUteO/video-communication/internal/auth/jwt"
+	authrepository "github.com/QuUteO/video-communication/internal/auth/repository"
+	authservice "github.com/QuUteO/video-communication/internal/auth/service"
 	"github.com/QuUteO/video-communication/internal/config"
 	"github.com/QuUteO/video-communication/internal/logger"
 	"github.com/QuUteO/video-communication/internal/routes"
@@ -78,13 +83,21 @@ func (a *Application) initRouter() error {
 	srv := service.NewService(repo, a.logger)
 	userHandler := handler.NewUserHandler(srv, a.logger)
 
+	// AuthJWT
+	AuthJWT := authjwt.NewJWT(a.cfg.JWT.Secret, time.Minute*time.Duration(a.cfg.JWT.Ttl))
+
+	// AuthService
+	repositor := authrepository.New(client, a.logger)
+	servic := authservice.NewAuthService(repositor, AuthJWT, a.logger)
+	authHandler := authhandler.NewHandler(servic, a.logger)
+
 	// WebSocket
 	hub := websocket.NewHub(a.logger)
 	wsHandler := websocket.NewHandlerWS(hub, srv, a.logger)
 	go hub.Run()
 
 	// Регистрация маршрутов
-	route := routes.NewRoute(userHandler, wsHandler)
+	route := routes.NewRoute(userHandler, wsHandler, authHandler, AuthJWT)
 	route.RegisterRoutes(a.router)
 
 	// Настройка HTTP сервера
