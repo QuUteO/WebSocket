@@ -1,4 +1,4 @@
-package handler
+package authhandler
 
 import (
 	"encoding/json"
@@ -11,11 +11,11 @@ import (
 )
 
 type Handler struct {
-	service service.Service
+	service authservice.Service
 	logger  *slog.Logger
 }
 
-func NewHandler(service service.Service, logger *slog.Logger) *Handler {
+func NewHandler(service authservice.Service, logger *slog.Logger) *Handler {
 	return &Handler{
 		service: service,
 		logger:  logger,

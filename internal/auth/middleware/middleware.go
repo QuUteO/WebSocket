@@ -1,4 +1,4 @@
-package middleware
+package authmiddleware
 
 import (
 	"context"
@@ -12,7 +12,7 @@ type ctxKey string
 
 const UserIDKey ctxKey = "user_id"
 
-func JWT(jwt *jwt.Manager) func(http.Handler) http.Handler {
+func JWT(jwt *authjwt.Manager) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			h := r.Header.Get("Authorization")
