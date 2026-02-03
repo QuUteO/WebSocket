@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,7 +15,7 @@ func main() {
 	// Создание приложения
 	application, err := app.New()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	// Канал для обработки сигналов
