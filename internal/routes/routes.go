@@ -1,6 +1,9 @@
 package routes
 
 import (
+	authhandler "github.com/QuUteO/video-communication/internal/auth/handler"
+	authjwt "github.com/QuUteO/video-communication/internal/auth/jwt"
+	authmiddleware "github.com/QuUteO/video-communication/internal/auth/middleware"
 	"github.com/QuUteO/video-communication/internal/static"
 	"github.com/QuUteO/video-communication/internal/user/handler"
 	"github.com/QuUteO/video-communication/internal/websocket"
@@ -10,30 +13,48 @@ import (
 type Route struct {
 	UserHandler      *handler.UserHandler
 	WebSocketHandler *websocket.HandlerWS
+	AuthHandler      *authhandler.Handler
+	jwt              *authjwt.Manager
 }
 
-func NewRoute(userHandler *handler.UserHandler, WebSocketHandler *websocket.HandlerWS) *Route {
+func NewRoute(
+	userHandler *handler.UserHandler,
+	WebSocketHandler *websocket.HandlerWS,
+	AuthHandler *authhandler.Handler,
+	jwt *authjwt.Manager) *Route {
 	return &Route{
 		UserHandler:      userHandler,
 		WebSocketHandler: WebSocketHandler,
+		AuthHandler:      AuthHandler,
+		jwt:              jwt,
 	}
 }
 
 func (h *Route) RegisterRoutes(router chi.Router) {
 	router.Get("/", static.ServeHtml("index.html"))
 
-	router.Route("/ws", func(r chi.Router) {
-		r.Get("/", h.WebSocketHandler.WebSocketHTTP)
+	router.Route("/auth", func(r chi.Router) {
+		r.Post("/register", h.AuthHandler.Register)
+		r.Post("/login", h.AuthHandler.Login)
 	})
 
-	router.Route("/users", func(r chi.Router) {
-		r.Post("/", h.UserHandler.CreateUser) // POST /users
-		r.Get("/", h.UserHandler.GetAllUsers) // GET /users
+	router.Group(func(r chi.Router) {
+		r.Use(authmiddleware.JWT(h.jwt))
 
-		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", h.UserHandler.GetUserByID)   // GET /users/{id}
-			r.Put("/", h.UserHandler.UpdateUser)    // PUT /users/{id}
-			r.Delete("/", h.UserHandler.DeleteUser) // DELETE /users/{id}
+		// websocket
+		r.Route("/ws", func(r chi.Router) {
+			r.Get("/", h.WebSocketHandler.WebSocketHTTP)
+		})
+
+		// users
+		r.Route("/users", func(r chi.Router) {
+			r.Get("/", h.UserHandler.GetAllUsers)
+
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", h.UserHandler.GetUserByID)
+				r.Put("/", h.UserHandler.UpdateUser)
+				r.Delete("/", h.UserHandler.DeleteUser)
+			})
 		})
 	})
 }
