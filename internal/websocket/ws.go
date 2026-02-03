@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"context"
 	"log/slog"
 	"net/http"
 	"time"
@@ -59,22 +58,4 @@ func (h *HandlerWS) WebSocketHTTP(w http.ResponseWriter, r *http.Request) {
 	// запуск обработчиков
 	go client.ReadPump()
 	go client.WritePump()
-
-	go func() {
-		time.Sleep(1 * time.Second)
-
-		ctx := context.Background()
-		messages, err := h.service.GetMessageByChannel(ctx, "general")
-		if err == nil {
-			for _, msg := range messages {
-				client.Send <- msg
-			}
-		}
-
-		client.CurrentChannel = "general"
-		h.hub.register <- &ClientRegistration{
-			Client:  client,
-			Channel: "general",
-		}
-	}()
 }
