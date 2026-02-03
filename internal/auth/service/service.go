@@ -1,4 +1,4 @@
-package service
+package authservice
 
 import (
 	"context"
@@ -19,8 +19,8 @@ type Service interface {
 }
 
 type AuthService struct {
-	repo   repository.Repository
-	jwt    *jwt.Manager
+	repo   authrepository.Repository
+	jwt    *authjwt.Manager
 	logger *slog.Logger
 }
 
@@ -67,7 +67,7 @@ func (a *AuthService) Login(ctx context.Context, req *model.LoginRequest) (strin
 	return a.jwt.Generate(user.Id.String())
 }
 
-func NewAuthService(repo repository.Repository, jwt *jwt.Manager, logger *slog.Logger) Service {
+func NewAuthService(repo authrepository.Repository, jwt *authjwt.Manager, logger *slog.Logger) Service {
 	return &AuthService{
 		repo:   repo,
 		jwt:    jwt,
